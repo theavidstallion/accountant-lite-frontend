@@ -1,6 +1,32 @@
 import axios from 'axios';
 
-const API_URL = '/api';
+// Use environment variable for API URL in production, fallback to proxy in development
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = `${API_BASE_URL}/api`;
+
+// Configure axios defaults
+axios.defaults.baseURL = API_BASE_URL;
+
+// Add token to all requests
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Handle authentication errors
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const incomeHeadService = {
   getAll: () => axios.get(`${API_URL}/income-heads`),
